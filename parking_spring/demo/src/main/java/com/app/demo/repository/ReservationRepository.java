@@ -12,4 +12,15 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     boolean existsByActiveTrue();               // Is there any active reservation?
     Optional<Reservation> findFirstByActiveTrue(); // Get the current active one
 
+    // Find active reservation for a specific spot
+    Optional<Reservation> findFirstBySpotNumberAndActiveTrue(String spotNumber);
+
+    // Check if a spot is already reserved
+    boolean existsBySpotNumberAndActiveTrue(String spotNumber);
+
+    // Find all active reservations
+    List<Reservation> findByActiveTrue();
+
+
+
 }

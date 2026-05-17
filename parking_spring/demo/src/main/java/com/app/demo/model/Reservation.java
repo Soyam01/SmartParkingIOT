@@ -23,5 +23,7 @@ public class Reservation {
 
     private LocalDateTime matchedAt; // null until matched
 
+    private String spotNumber;
 
+    private LocalDateTime reservedAt;
 }

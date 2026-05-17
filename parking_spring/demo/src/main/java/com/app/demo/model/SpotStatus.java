@@ -14,6 +14,7 @@ public class SpotStatus {
 
     private String status = "free";  // free / occupied
     private LocalDateTime lastUpdated;
+    private String reservedPlate;    // optional
 
     // Constructors
     public SpotStatus() {}
