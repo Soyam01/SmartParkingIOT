@@ -5,7 +5,7 @@
 
 // ================== WiFi CONFIG ==================
 const char* ssid = "NTFiber_14B8_2.4G";
-const char* password = "xm5GEXNk";
+const char* password = "********";
 const char* springServer = "http://192.168.1.7:8080/api/spot/update";   // ← CHANGE THIS
 
 #define NUM_SPOTS 5
