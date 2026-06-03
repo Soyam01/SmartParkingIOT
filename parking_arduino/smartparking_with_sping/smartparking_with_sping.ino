@@ -7,7 +7,7 @@
 const char* ssid = "Virinchi_2nd_2.4g";
 const char* password = "virinchi@2025";
 
-const char* springServer = "http://10.5.48.108:8080/api/spot/update";  // Your laptop IP
+const char* springServer = "http://10.5.48.126:8080/api/spot/update";  // Your laptop IP
 
 // Pins
 #define TRIG_PIN   5

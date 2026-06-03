@@ -34,7 +34,7 @@ MIN_PLATE_LENGTH = 4
 OCR_CONFIDENCE_THRESHOLD = 0.35
 
 # ESP32 Gate Control - UPDATE THIS WITH YOUR ESP32 IP
-ESP32_GATE_URL = "http://192.168.1.14:80/gate/open"   # ←←← Change to your ESP32 IP
+ESP32_GATE_URL = "http://10.10.51.130:80/gate/open"   # ←←← Change to your ESP32 IP
 
 print("🚀 Starting Smart Parking ANPR with Gate Control")
 print(f"Gate endpoint: {ESP32_GATE_URL}")
