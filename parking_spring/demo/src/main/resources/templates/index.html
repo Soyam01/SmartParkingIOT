@@ -7,7 +7,7 @@
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background: #f8f9fa; }
         h1 { text-align: center; color: #2c3e50; }
-        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; max-width: 1200px; margin: 30px auto; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 15px; max-width: 1200px; margin: 30px auto; }
         .spot { padding: 20px; border-radius: 12px; text-align: center; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.1); min-height: 170px; }
         .free     { background: #d4edda; color: #155724; border: 3px solid #c3e6cb; }
         .occupied { background: #f8d7da; color: #721c24; border: 3px solid #f5c6cb; }
@@ -17,19 +17,25 @@
         .error   { background: #f8d7da; color: #721c24; }
         button { padding: 12px; width: 100%; border: none; border-radius: 6px; cursor: pointer; font-size: 15px; }
         button:disabled { background: #ccc; cursor: not-allowed; }
+        input { box-sizing: border-box; margin-bottom: 10px; padding: 10px; width: 100%; }
+        .connection { text-align: center; color: #5f6b76; }
     </style>
 </head>
 <body>
 <h1>Smart Parking System - 5 Spots</h1>
+<p id="connection-status" class="connection">Connecting to live updates...</p>
 
 <div th:if="${successMessage}" class="message success" th:text="${successMessage}"></div>
 <div th:if="${errorMessage}" class="message error" th:text="${errorMessage}"></div>
 
 <div class="grid">
-    <div th:each="spot : ${spots}" class="spot">
+    <div th:each="spot : ${spots}"
+         class="spot"
+         th:id="'spot-' + ${spot.spotNumber}"
+         th:classappend="${spot.status}">
 
         <!-- FREE -->
-        <div th:if="${spot.status == 'free'}" class="free">
+        <div th:if="${spot.status == 'free'}">
             <h3 th:text="'Spot ' + ${spot.spotNumber}"></h3>
             <p><strong>FREE</strong></p>
             <form th:action="@{/register}" method="post">
@@ -40,14 +46,14 @@
         </div>
 
         <!-- OCCUPIED -->
-        <div th:if="${spot.status == 'occupied'}" class="occupied">
+        <div th:if="${spot.status == 'occupied'}">
             <h3 th:text="'Spot ' + ${spot.spotNumber}"></h3>
             <p><strong>OCCUPIED</strong></p>
             <button disabled>Unavailable</button>
         </div>
 
         <!-- RESERVED -->
-        <div th:if="${spot.status == 'reserved'}" class="reserved">
+        <div th:if="${spot.status == 'reserved'}">
             <h3 th:text="'Spot ' + ${spot.spotNumber}"></h3>
             <p><strong>RESERVED</strong></p>
             <p th:if="${spot.reservedPlate != null}">For: <strong th:text="${spot.reservedPlate}"></strong></p>
@@ -56,8 +62,86 @@
     </div>
 </div>
 
-<div style="text-align:center; margin-top: 40px;">
-    <a href="/">↻ Refresh Status</a>
-</div>
+<script>
+    const connectionStatus = document.getElementById('connection-status');
+    const eventSource = new EventSource('/api/spots/events');
+
+    function addHeading(container, spotNumber) {
+        const heading = document.createElement('h3');
+        heading.textContent = `Spot ${spotNumber}`;
+        container.appendChild(heading);
+    }
+
+    function addStatus(container, status) {
+        const paragraph = document.createElement('p');
+        const strong = document.createElement('strong');
+        strong.textContent = status.toUpperCase();
+        paragraph.appendChild(strong);
+        container.appendChild(paragraph);
+    }
+
+    function renderSpot(update) {
+        const spot = document.getElementById(`spot-${update.spotNumber}`);
+        if (!spot) return;
+
+        spot.className = `spot ${update.status}`;
+        spot.replaceChildren();
+        addHeading(spot, update.spotNumber);
+        addStatus(spot, update.status);
+
+        if (update.status === 'free') {
+            const form = document.createElement('form');
+            form.method = 'post';
+            form.action = '/register';
+
+            const spotInput = document.createElement('input');
+            spotInput.type = 'hidden';
+            spotInput.name = 'spotNumber';
+            spotInput.value = update.spotNumber;
+
+            const plateInput = document.createElement('input');
+            plateInput.type = 'text';
+            plateInput.name = 'plateNumber';
+            plateInput.placeholder = 'Vehicle Number';
+            plateInput.required = true;
+
+            const button = document.createElement('button');
+            button.type = 'submit';
+            button.textContent = 'Reserve This Spot';
+
+            form.append(spotInput, plateInput, button);
+            spot.appendChild(form);
+            return;
+        }
+
+        if (update.status === 'reserved' && update.reservedPlate) {
+            const plate = document.createElement('p');
+            plate.append('For: ');
+            const strong = document.createElement('strong');
+            strong.textContent = update.reservedPlate;
+            plate.appendChild(strong);
+            spot.appendChild(plate);
+        }
+
+        const button = document.createElement('button');
+        button.disabled = true;
+        button.textContent = 'Unavailable';
+        spot.appendChild(button);
+    }
+
+    eventSource.addEventListener('snapshot', event => {
+        JSON.parse(event.data).forEach(renderSpot);
+        connectionStatus.textContent = 'Live updates connected';
+    });
+
+    eventSource.addEventListener('spot-update', event => {
+        renderSpot(JSON.parse(event.data));
+        connectionStatus.textContent = 'Live updates connected';
+    });
+
+    eventSource.onerror = () => {
+        connectionStatus.textContent = 'Live connection lost. Reconnecting...';
+    };
+</script>
 </body>
 </html>

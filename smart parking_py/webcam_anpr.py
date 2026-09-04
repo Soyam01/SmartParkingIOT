@@ -2,6 +2,9 @@
 # Smart Parking - License Plate Recognition from External Webcam
 # Saves detections to PostgreSQL database
 
+
+#----------------DO NOT USE------------------------
+
 import cv2
 import easyocr
 import numpy as np
