@@ -1,7 +1,15 @@
 # webcam_anpr_match_only_general.py
 # Smart Parking - License Plate Recognition & Gate Control
 
-import cv2
+import sys
+
+try:
+    import cv2
+except ModuleNotFoundError:
+    print("OpenCV is not installed for this Python interpreter.")
+    print(f"Install it with:\n\n{sys.executable} -m pip install opencv-python\n")
+    raise SystemExit(1)
+
 import easyocr
 import numpy as np
 import time
@@ -34,7 +42,7 @@ MIN_PLATE_LENGTH = 4
 OCR_CONFIDENCE_THRESHOLD = 0.35
 
 # ESP32 Gate Control - UPDATE THIS WITH YOUR ESP32 IP
-ESP32_GATE_URL = "http://10.10.51.219:80/gate/open"   # ←←← Change to your ESP32 IP
+ESP32_GATE_URL = "http://10.10.54.227:80/gate/open"   # ←←← Change to your ESP32 IP
 
 print("🚀 Starting Smart Parking ANPR with Gate Control")
 print(f"Gate endpoint: {ESP32_GATE_URL}")

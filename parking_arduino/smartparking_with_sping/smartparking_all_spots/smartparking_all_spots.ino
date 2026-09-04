@@ -10,7 +10,7 @@ const char* ssid = "Virinchi_Guest";
 const char* password = "welcome2virinchi";
 
 // Use this variable - Change only here if IP changes
-const char* springServer = "http://10.10.51.206:8080";   // ← Your current laptop IP
+const char* springServer = "http://10.10.54.198:8080";   // ← Your current laptop IP
 
 #define NUM_SPOTS 5
 

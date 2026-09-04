@@ -2,6 +2,8 @@
 # Smart Parking - License Plate Recognition & Matching
 # General purpose - works with any standard plate format
 
+#----------------DO NOT USE------------------
+
 import cv2
 import easyocr
 import numpy as np

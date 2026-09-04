@@ -4,6 +4,7 @@ import com.app.demo.model.Reservation;
 import com.app.demo.model.SpotStatus;
 import com.app.demo.repository.ReservationRepository;
 import com.app.demo.repository.SpotStatusRepository;
+import com.app.demo.service.SpotEventService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -23,6 +24,9 @@ public class ParkingController {
 
     @Autowired
     private ReservationRepository reservationRepository;
+
+    @Autowired
+    private SpotEventService spotEventService;
 
     @GetMapping("/")
     public String home(Model model) {
@@ -91,6 +95,7 @@ public class ParkingController {
         reservation.setActive(true);
         reservation.setReservedAt(LocalDateTime.now());
         reservationRepository.save(reservation);
+        spotEventService.publish(reservation.getSpotNumber());
 
         redirectAttributes.addFlashAttribute("successMessage",
                 "Spot " + reservation.getSpotNumber() + " reserved successfully for vehicle: " + reservation.getPlateNumber());
