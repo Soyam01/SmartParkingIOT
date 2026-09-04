@@ -1,147 +1,200 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Parking - 5 Spots</title>
+    <title>Parkline | Smart Parking</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background: #f8f9fa; }
-        h1 { text-align: center; color: #2c3e50; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 15px; max-width: 1200px; margin: 30px auto; }
-        .spot { padding: 20px; border-radius: 12px; text-align: center; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.1); min-height: 170px; }
-        .free     { background: #d4edda; color: #155724; border: 3px solid #c3e6cb; }
-        .occupied { background: #f8d7da; color: #721c24; border: 3px solid #f5c6cb; }
-        .reserved { background: #fff3cd; color: #856404; border: 3px solid #ffeeba; }
-        .message { padding: 15px; margin: 15px auto; max-width: 700px; border-radius: 8px; text-align: center; }
-        .success { background: #d4edda; color: #155724; }
-        .error   { background: #f8d7da; color: #721c24; }
-        button { padding: 12px; width: 100%; border: none; border-radius: 6px; cursor: pointer; font-size: 15px; }
-        button:disabled { background: #ccc; cursor: not-allowed; }
-        input { box-sizing: border-box; margin-bottom: 10px; padding: 10px; width: 100%; }
-        .connection { text-align: center; color: #5f6b76; }
+        :root {
+            --ink: #10222b;
+            --muted: #70818a;
+            --surface: #f4f7f5;
+            --panel: #ffffff;
+            --road: #23343b;
+            --road-line: #e8bd58;
+            --free: #238b65;
+            --free-soft: #e7f6ee;
+            --reserved: #b87913;
+            --reserved-soft: #fff3d5;
+            --occupied: #c94d4d;
+            --occupied-soft: #fde8e6;
+            --shadow: 0 22px 55px rgba(18, 42, 48, .12);
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-width: 320px;
+            color: var(--ink);
+            background: radial-gradient(circle at 10% 0%, #e4f1ed, transparent 34rem), var(--surface);
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        .shell { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 42px 0 56px; }
+        .topbar { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
+        .eyebrow { margin: 0 0 8px; color: var(--free); font-size: .72rem; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; }
+        h1 { margin: 0; font-size: clamp(2rem, 4vw, 3.8rem); letter-spacing: -.06em; line-height: .95; }
+        .intro { max-width: 510px; margin: 14px 0 0; color: var(--muted); line-height: 1.6; }
+        .connection { display: inline-flex; align-items: center; gap: 9px; margin: 0; padding: 10px 14px; border: 1px solid #d8e5df; border-radius: 999px; color: var(--muted); background: rgba(255,255,255,.72); font-size: .82rem; font-weight: 700; white-space: nowrap; }
+        .connection::before { width: 8px; height: 8px; border-radius: 50%; background: var(--road-line); content: ""; }
+
+        .legend { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 18px; }
+        .legend span { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: .78rem; font-weight: 700; }
+        .legend i { width: 10px; height: 10px; border-radius: 50%; }
+        .legend .free-dot { background: var(--free); }
+        .legend .reserved-dot { background: var(--reserved); }
+        .legend .occupied-dot { background: var(--occupied); }
+
+        .site-plan { display: grid; grid-template-columns: minmax(230px, 1fr) minmax(150px, .62fr) minmax(230px, 1fr); grid-template-rows: repeat(3, minmax(190px, auto)); gap: 16px; padding: 22px; border: 1px solid rgba(255,255,255,.8); border-radius: 30px; background: rgba(255,255,255,.56); box-shadow: var(--shadow); }
+        .road { position: relative; grid-column: 2; grid-row: 1 / 4; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 22px; background: var(--road); box-shadow: inset 0 0 0 1px rgba(255,255,255,.09); }
+        .road::before, .road::after { position: absolute; left: 50%; width: 3px; height: 42px; border-radius: 5px; background: var(--road-line); content: ""; transform: translateX(-50%); box-shadow: 0 86px 0 var(--road-line), 0 172px 0 var(--road-line), 0 -86px 0 var(--road-line), 0 -172px 0 var(--road-line); opacity: .9; }
+        .road::before { top: -12px; }
+        .road::after { bottom: -12px; }
+        .road-label { z-index: 1; color: rgba(255,255,255,.7); font-size: .7rem; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; transform: rotate(-90deg); }
+
+        .spot, .counter { position: relative; min-width: 0; border-radius: 22px; overflow: hidden; }
+        .spot { display: flex; flex-direction: column; justify-content: space-between; padding: 20px; border: 2px solid currentColor; background: var(--free-soft); color: var(--free); transition: transform .22s ease, box-shadow .22s ease; }
+        .spot:hover { transform: translateY(-4px); box-shadow: 0 14px 25px rgba(22, 70, 57, .15); }
+        .spot.reserved { color: var(--reserved); background: var(--reserved-soft); }
+        .spot.occupied { color: var(--occupied); background: var(--occupied-soft); }
+        .spot-2 { grid-column: 1; grid-row: 1; }
+        .spot-1 { grid-column: 1; grid-row: 2; }
+        .spot-3 { grid-column: 3; grid-row: 1; }
+        .spot-4 { grid-column: 3; grid-row: 2; }
+        .spot-5 { grid-column: 3; grid-row: 3; }
+        .spot::after { position: absolute; right: 17px; bottom: 16px; width: 40px; height: 72px; border: 2px solid currentColor; border-radius: 5px; content: ""; opacity: .22; transform: rotate(20deg); }
+        .spot-head, .status-row { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .spot-number { margin: 0; font-size: 1.18rem; letter-spacing: -.04em; }
+        .spot-bay { color: currentColor; font-size: .68rem; font-weight: 800; letter-spacing: .12em; opacity: .65; text-transform: uppercase; }
+        .badge { padding: 6px 9px; border-radius: 999px; color: inherit; background: rgba(255,255,255,.67); font-size: .65rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+        .spot form { position: relative; z-index: 1; display: flex; gap: 8px; margin-top: 16px; }
+        input { min-width: 0; width: 100%; padding: 11px 12px; border: 1px solid rgba(16,34,43,.14); border-radius: 9px; outline: none; color: var(--ink); background: rgba(255,255,255,.8); font: inherit; font-size: .78rem; }
+        input:focus { border-color: var(--free); box-shadow: 0 0 0 3px rgba(35,139,101,.14); }
+        button { padding: 10px 13px; border: 0; border-radius: 9px; color: #fff; background: var(--free); cursor: pointer; font: inherit; font-size: .76rem; font-weight: 800; white-space: nowrap; }
+        button:hover { filter: brightness(.92); }
+        button:disabled { color: #fff; background: currentColor; cursor: not-allowed; opacity: .7; }
+        .spot-note { position: relative; z-index: 1; margin: 20px 0 0; color: inherit; font-size: .8rem; font-weight: 700; opacity: .78; }
+        .counter { grid-column: 1; grid-row: 3; display: flex; flex-direction: column; justify-content: center; padding: 22px; color: #f6edd8; background: #b66b42; box-shadow: 0 12px 25px rgba(108,54,29,.16); }
+        .counter-kicker { margin: 0 0 8px; color: #f5dcae; font-size: .68rem; font-weight: 900; letter-spacing: .15em; text-transform: uppercase; }
+        .counter h2 { margin: 0; font-size: 1.25rem; letter-spacing: -.04em; }
+        .counter p:last-child { margin: 10px 0 0; color: #f9e8c9; font-size: .78rem; line-height: 1.5; }
+        .message { margin: 0 0 18px; padding: 14px 18px; border-radius: 14px; color: var(--free); background: var(--free-soft); font-weight: 700; }
+        .message.error { color: var(--occupied); background: var(--occupied-soft); }
+
+        @media (max-width: 720px) {
+            .shell { width: min(100% - 24px, 560px); padding-top: 28px; }
+            .topbar { display: block; }
+            .connection { margin-top: 18px; }
+            .site-plan { grid-template-columns: 1fr 1fr; grid-template-rows: auto 100px auto auto; gap: 12px; padding: 12px; }
+            .road { grid-column: 1 / 3; grid-row: 2; min-height: 80px; }
+            .road-label { transform: none; }
+            .road::before, .road::after { top: 50%; left: -12px; width: 42px; height: 3px; transform: translateY(-50%); box-shadow: 86px 0 0 var(--road-line), 172px 0 0 var(--road-line), 258px 0 0 var(--road-line), 344px 0 0 var(--road-line); }
+            .road::before { left: -12px; }
+            .road::after { display: none; }
+            .spot-2 { grid-column: 1; grid-row: 1; }
+            .spot-3 { grid-column: 2; grid-row: 1; }
+            .spot-1 { grid-column: 1; grid-row: 3; }
+            .spot-4 { grid-column: 2; grid-row: 3; }
+            .counter { grid-column: 1; grid-row: 4; }
+            .spot-5 { grid-column: 2; grid-row: 4; }
+            .spot form { display: block; }
+            .spot form button { width: 100%; margin-top: 8px; }
+        }
     </style>
 </head>
 <body>
-<h1>Smart Parking System - 5 Spots</h1>
-<p id="connection-status" class="connection">Connecting to live updates...</p>
-
-<div th:if="${successMessage}" class="message success" th:text="${successMessage}"></div>
-<div th:if="${errorMessage}" class="message error" th:text="${errorMessage}"></div>
-
-<div class="grid">
-    <div th:each="spot : ${spots}"
-         class="spot"
-         th:id="'spot-' + ${spot.spotNumber}"
-         th:classappend="${spot.status}">
-
-        <!-- FREE -->
-        <div th:if="${spot.status == 'free'}">
-            <h3 th:text="'Spot ' + ${spot.spotNumber}"></h3>
-            <p><strong>FREE</strong></p>
-            <form th:action="@{/register}" method="post">
-                <input type="hidden" name="spotNumber" th:value="${spot.spotNumber}"/>
-                <input type="text" name="plateNumber" placeholder="Vehicle Number" required/>
-                <button type="submit">Reserve This Spot</button>
-            </form>
+<main class="shell">
+    <header class="topbar">
+        <div>
+            <p class="eyebrow">Parkline / Operations view</p>
+            <h1>Find your bay.</h1>
+            <p class="intro">A live view of the physical parking model. Reserve a free space directly from its bay.</p>
         </div>
+        <p id="connection-status" class="connection">Connecting to live updates...</p>
+    </header>
 
-        <!-- OCCUPIED -->
-        <div th:if="${spot.status == 'occupied'}">
-            <h3 th:text="'Spot ' + ${spot.spotNumber}"></h3>
-            <p><strong>OCCUPIED</strong></p>
-            <button disabled>Unavailable</button>
-        </div>
+    <div th:if="${successMessage}" class="message" th:text="${successMessage}"></div>
+    <div th:if="${errorMessage}" class="message error" th:text="${errorMessage}"></div>
 
-        <!-- RESERVED -->
-        <div th:if="${spot.status == 'reserved'}">
-            <h3 th:text="'Spot ' + ${spot.spotNumber}"></h3>
-            <p><strong>RESERVED</strong></p>
-            <p th:if="${spot.reservedPlate != null}">For: <strong th:text="${spot.reservedPlate}"></strong></p>
-            <button disabled>Unavailable</button>
-        </div>
+    <div class="legend" aria-label="Parking status legend">
+        <span><i class="free-dot"></i>Free</span>
+        <span><i class="reserved-dot"></i>Reserved</span>
+        <span><i class="occupied-dot"></i>Occupied</span>
     </div>
-</div>
+
+    <section class="site-plan" aria-label="Parking area layout">
+        <article th:each="spot : ${spots}"
+                 th:id="'spot-' + ${spot.spotNumber}"
+                 th:class="'spot spot-' + ${spot.spotNumber.replace('SPOT-', '')} + ' ' + ${spot.status}">
+            <div class="spot-head">
+                <h2 class="spot-number" th:text="'Spot ' + ${spot.spotNumber.replace('SPOT-', '')}"></h2>
+                <span class="spot-bay">Parking bay</span>
+            </div>
+            <div class="status-row">
+                <span class="badge" th:text="${spot.status}"></span>
+            </div>
+            <form th:if="${spot.status == 'free'}" th:action="@{/register}" method="post">
+                <input type="hidden" name="spotNumber" th:value="${spot.spotNumber}"/>
+                <input type="text" name="plateNumber" placeholder="Vehicle number" required/>
+                <button type="submit">Book bay</button>
+            </form>
+            <p th:if="${spot.status == 'reserved'}" class="spot-note">Reserved for <strong th:text="${spot.reservedPlate}"></strong></p>
+            <p th:if="${spot.status == 'occupied'}" class="spot-note">Vehicle detected</p>
+        </article>
+
+        <div class="road" aria-label="Road and driveway">
+            <span class="road-label">Driveway</span>
+        </div>
+
+        <aside class="counter">
+            <p class="counter-kicker">Entry point</p>
+            <h2>Control / Ticket Counter</h2>
+            <p>Start here to enter, collect a ticket, or ask for assistance.</p>
+        </aside>
+    </section>
+</main>
 
 <script>
     const connectionStatus = document.getElementById('connection-status');
     const eventSource = new EventSource('/api/spots/events');
 
-    function addHeading(container, spotNumber) {
-        const heading = document.createElement('h3');
-        heading.textContent = `Spot ${spotNumber}`;
-        container.appendChild(heading);
-    }
-
-    function addStatus(container, status) {
-        const paragraph = document.createElement('p');
-        const strong = document.createElement('strong');
-        strong.textContent = status.toUpperCase();
-        paragraph.appendChild(strong);
-        container.appendChild(paragraph);
-    }
-
     function renderSpot(update) {
         const spot = document.getElementById(`spot-${update.spotNumber}`);
         if (!spot) return;
 
-        spot.className = `spot ${update.status}`;
+        const number = update.spotNumber.replace('SPOT-', '');
+        spot.className = `spot spot-${number} ${update.status}`;
         spot.replaceChildren();
-        addHeading(spot, update.spotNumber);
-        addStatus(spot, update.status);
+
+        const head = document.createElement('div');
+        head.className = 'spot-head';
+        head.innerHTML = `<h2 class="spot-number">Spot ${number}</h2><span class="spot-bay">Parking bay</span>`;
+        const status = document.createElement('div');
+        status.className = 'status-row';
+        status.innerHTML = `<span class="badge">${update.status}</span>`;
+        spot.append(head, status);
 
         if (update.status === 'free') {
-            const form = document.createElement('form');
-            form.method = 'post';
-            form.action = '/register';
-
-            const spotInput = document.createElement('input');
-            spotInput.type = 'hidden';
-            spotInput.name = 'spotNumber';
-            spotInput.value = update.spotNumber;
-
-            const plateInput = document.createElement('input');
-            plateInput.type = 'text';
-            plateInput.name = 'plateNumber';
-            plateInput.placeholder = 'Vehicle Number';
-            plateInput.required = true;
-
-            const button = document.createElement('button');
-            button.type = 'submit';
-            button.textContent = 'Reserve This Spot';
-
-            form.append(spotInput, plateInput, button);
-            spot.appendChild(form);
-            return;
+            spot.insertAdjacentHTML('beforeend', `<form action="/register" method="post"><input type="hidden" name="spotNumber" value="${update.spotNumber}"><input type="text" name="plateNumber" placeholder="Vehicle number" required><button type="submit">Book bay</button></form>`);
+        } else {
+            const note = document.createElement('p');
+            note.className = 'spot-note';
+            note.innerHTML = update.status === 'reserved' && update.reservedPlate
+                ? `Reserved for <strong></strong>` : 'Vehicle detected';
+            if (update.status === 'reserved' && update.reservedPlate) note.querySelector('strong').textContent = update.reservedPlate;
+            spot.appendChild(note);
         }
-
-        if (update.status === 'reserved' && update.reservedPlate) {
-            const plate = document.createElement('p');
-            plate.append('For: ');
-            const strong = document.createElement('strong');
-            strong.textContent = update.reservedPlate;
-            plate.appendChild(strong);
-            spot.appendChild(plate);
-        }
-
-        const button = document.createElement('button');
-        button.disabled = true;
-        button.textContent = 'Unavailable';
-        spot.appendChild(button);
     }
 
     eventSource.addEventListener('snapshot', event => {
         JSON.parse(event.data).forEach(renderSpot);
         connectionStatus.textContent = 'Live updates connected';
     });
-
     eventSource.addEventListener('spot-update', event => {
         renderSpot(JSON.parse(event.data));
         connectionStatus.textContent = 'Live updates connected';
     });
-
-    eventSource.onerror = () => {
-        connectionStatus.textContent = 'Live connection lost. Reconnecting...';
-    };
+    eventSource.onerror = () => connectionStatus.textContent = 'Live connection lost. Reconnecting...';
 </script>
 </body>
 </html>
