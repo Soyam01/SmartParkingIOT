@@ -10,6 +10,8 @@ This system allows users to:
 - View real-time availability of 5 parking spots via a web dashboard.
 - Reserve a spot by entering their vehicle number.
 - Automatically detect arriving vehicles using a webcam and open the gate if the vehicle is registered.
+- Shows the direction of the reserved spot by the user
+
 
 ---
 
@@ -22,6 +24,7 @@ This system allows users to:
 - **License Plate Recognition** using Python + EasyOCR
 - **16x2 LCD Display** for local status
 - **Auto-clear Reservation** when a car parks in a reserved spot
+- **Directions for User to Follow** when the car arrives give direction to the reserved destination
 
 ---
 
