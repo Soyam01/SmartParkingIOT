@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.Locale;
 
 @Entity
 @Data
@@ -16,14 +17,18 @@ public class Reservation {
     @Column(nullable = false, unique = false)
     private String plateNumber;     // e.g. "BA12PA3456"
 
-    private boolean active = true;  // true = currently reserved / waiting
+    private boolean active = true;  // Held until the arriving vehicle parks.
 
     @Column(updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    private LocalDateTime matchedAt; // null until matched
+    private LocalDateTime matchedAt; // Entry recognition time; null while waiting.
 
     private String spotNumber;
 
     private LocalDateTime reservedAt;
+
+    public static String normalizePlateNumber(String plateNumber) {
+        return plateNumber == null ? "" : plateNumber.replaceAll("[^a-zA-Z0-9]", "").toUpperCase(Locale.ROOT);
+    }
 }

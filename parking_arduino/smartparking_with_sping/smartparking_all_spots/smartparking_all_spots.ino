@@ -10,7 +10,7 @@ const char* ssid = "Virinchi_Guest";
 const char* password = "welcome2virinchi";
 
 // Use this variable - Change only here if IP changes
-const char* springServer = "http://10.10.54.198:8080";   // ← Your current laptop IP
+const char* springServer = "http://10.10.55.35:8080";   // ← current laptop IP
 
 #define NUM_SPOTS 5
 
@@ -19,6 +19,12 @@ const int trigPins[NUM_SPOTS] = {5, 26, 2, 15, 13};
 const int echoPins[NUM_SPOTS] = {18, 25, 21, 22, 23};
 
 #define SERVO_PIN 12
+
+// MG995 gate positions. Adjust these two values if the horn is mounted on
+// a different spline: closed should be parallel to the servo body and open
+// should point upward.
+const int GATE_CLOSED_ANGLE = 90;
+const int GATE_OPEN_ANGLE = 180;
 
 // ================== LCD PINS (Safe) ==================
 #define LCD_SDA 32
@@ -51,14 +57,14 @@ void openMainGate() {
   lcd.setCursor(0,0);
   lcd.print("Opening Gate...");
   
-  moveServoSmooth(0, 90, 18);
+  moveServoSmooth(GATE_CLOSED_ANGLE, GATE_OPEN_ANGLE, 18);
   delay(8000);
   
   Serial.println("🚪 CLOSING MAIN GATE SLOWLY...");
   lcd.clear();
   lcd.setCursor(0,0);
   lcd.print("Closing Gate...");
-  moveServoSmooth(90, 0, 22);
+  moveServoSmooth(GATE_OPEN_ANGLE, GATE_CLOSED_ANGLE, 22);
   Serial.println("✅ MAIN GATE CLOSED");
   
   lcd.clear();
@@ -124,7 +130,7 @@ void setup() {
 
   // Servo
   gateServo.attach(SERVO_PIN);
-  gateServo.write(0);
+  gateServo.write(GATE_CLOSED_ANGLE);
   Serial.println("Servo initialized on pin 12");
 
   // WiFi

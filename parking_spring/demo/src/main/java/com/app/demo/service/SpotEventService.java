@@ -1,6 +1,7 @@
 package com.app.demo.service;
 
 import com.app.demo.dto.SpotUpdate;
+import com.app.demo.dto.ArrivalUpdate;
 import com.app.demo.model.Reservation;
 import com.app.demo.model.SpotStatus;
 import com.app.demo.repository.ReservationRepository;
@@ -27,7 +28,7 @@ public class SpotEventService {
         this.reservationRepository = reservationRepository;
     }
 
-    public SseEmitter subscribe() {
+    public synchronized SseEmitter subscribe() {
         SseEmitter emitter = new SseEmitter(0L);
         emitters.add(emitter);
         emitter.onCompletion(() -> emitters.remove(emitter));
@@ -38,6 +39,9 @@ public class SpotEventService {
             emitter.send(SseEmitter.event()
                     .name("snapshot")
                     .data(getSnapshot()));
+            emitter.send(SseEmitter.event()
+                    .name("arrival-snapshot")
+                    .data(getArrivalSnapshot()));
         } catch (IOException | RuntimeException error) {
             emitters.remove(emitter);
             emitter.completeWithError(error);
@@ -46,13 +50,22 @@ public class SpotEventService {
         return emitter;
     }
 
-    public void publish(String spotNumber) {
-        SpotUpdate update = getEffectiveUpdate(spotNumber);
+    public synchronized void publish(String spotNumber) {
+        broadcast("spot-update", getEffectiveUpdate(spotNumber));
+        // Empty lists explicitly clear completed routes, including on reconnect.
+        broadcast("arrival-snapshot", getArrivalSnapshot());
+    }
+
+    public synchronized void publishArrival(ArrivalUpdate update) {
+        broadcast("arrival-match", update);
+    }
+
+    private void broadcast(String eventName, Object data) {
         for (SseEmitter emitter : emitters) {
             try {
                 emitter.send(SseEmitter.event()
-                        .name("spot-update")
-                        .data(update));
+                        .name(eventName)
+                        .data(data));
             } catch (IOException | RuntimeException error) {
                 emitters.remove(emitter);
                 emitter.complete();
@@ -60,12 +73,24 @@ public class SpotEventService {
         }
     }
 
-    private List<SpotUpdate> getSnapshot() {
+    public List<SpotUpdate> getSnapshot() {
         List<SpotUpdate> updates = new ArrayList<>();
         for (int i = 1; i <= 5; i++) {
             updates.add(getEffectiveUpdate("SPOT-" + i));
         }
         return updates;
+    }
+
+    private List<ArrivalUpdate> getArrivalSnapshot() {
+        return reservationRepository.findByActiveTrueAndMatchedAtIsNotNullOrderByMatchedAtDesc().stream()
+                .filter(reservation -> reservation.getSpotNumber() != null
+                        && reservation.getSpotNumber().matches("SPOT-[1-5]"))
+                .filter(reservation -> spotStatusRepository.findById(reservation.getSpotNumber())
+                        .map(spot -> !"occupied".equalsIgnoreCase(spot.getStatus())).orElse(true))
+                .map(reservation -> new ArrivalUpdate(reservation.getId(),
+                        Reservation.normalizePlateNumber(reservation.getPlateNumber()),
+                        reservation.getSpotNumber(), reservation.getMatchedAt()))
+                .toList();
     }
 
     private SpotUpdate getEffectiveUpdate(String spotNumber) {

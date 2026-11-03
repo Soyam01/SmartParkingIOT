@@ -21,6 +21,8 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     // Find all active reservations
     List<Reservation> findByActiveTrue();
 
+    List<Reservation> findByActiveTrueAndMatchedAtIsNotNullOrderByMatchedAtDesc();
+
 
 
 }

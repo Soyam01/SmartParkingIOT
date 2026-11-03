@@ -45,7 +45,7 @@
         .legend .reserved-dot { background: var(--reserved); }
         .legend .occupied-dot { background: var(--occupied); }
 
-        .site-plan { display: grid; grid-template-columns: minmax(230px, 1fr) minmax(150px, .62fr) minmax(230px, 1fr); grid-template-rows: repeat(3, minmax(190px, auto)); gap: 16px; padding: 22px; border: 1px solid rgba(255,255,255,.8); border-radius: 30px; background: rgba(255,255,255,.56); box-shadow: var(--shadow); }
+        .site-plan { position: relative; display: grid; grid-template-columns: minmax(230px, 1fr) minmax(150px, .62fr) minmax(230px, 1fr); grid-template-rows: repeat(3, minmax(190px, auto)); gap: 16px; padding: 22px; border: 1px solid rgba(255,255,255,.8); border-radius: 30px; background: rgba(255,255,255,.56); box-shadow: var(--shadow); }
         .road { position: relative; grid-column: 2; grid-row: 1 / 4; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 22px; background: var(--road); box-shadow: inset 0 0 0 1px rgba(255,255,255,.09); }
         .road::before, .road::after { position: absolute; left: 50%; width: 3px; height: 42px; border-radius: 5px; background: var(--road-line); content: ""; transform: translateX(-50%); box-shadow: 0 86px 0 var(--road-line), 0 172px 0 var(--road-line), 0 -86px 0 var(--road-line), 0 -172px 0 var(--road-line); opacity: .9; }
         .road::before { top: -12px; }
@@ -54,9 +54,19 @@
 
         .spot, .counter { position: relative; min-width: 0; border-radius: 22px; overflow: hidden; }
         .spot { display: flex; flex-direction: column; justify-content: space-between; padding: 20px; border: 2px solid currentColor; background: var(--free-soft); color: var(--free); transition: transform .22s ease, box-shadow .22s ease; }
-        .spot:hover { transform: translateY(-4px); box-shadow: 0 14px 25px rgba(22, 70, 57, .15); }
+        .spot.free:hover { transform: translateY(-4px); box-shadow: 0 14px 25px rgba(22, 70, 57, .15); }
         .spot.reserved { color: var(--reserved); background: var(--reserved-soft); }
         .spot.occupied { color: var(--occupied); background: var(--occupied-soft); }
+        .route-overlay { position: absolute; inset: 0; z-index: 3; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+        .route-overlay[hidden] { display: none; }
+        .route-path { fill: none; stroke: var(--road-line); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 12 8; animation: route-flow 1s linear infinite; }
+        .route-chevrons { fill: none; stroke: #fff3b0; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+        .route-head { fill: var(--road-line); }
+        .route-origin { fill: var(--road); stroke: var(--road-line); stroke-width: 3; }
+        .route-active .road-label { opacity: 0; }
+        .spot.route-target { box-shadow: 0 0 0 4px rgba(232,189,88,.4), 0 14px 30px rgba(18,42,48,.12); }
+        .route-target .spot-bay { opacity: 1; }
+        @keyframes route-flow { to { stroke-dashoffset: -20; } }
         .spot-2 { grid-column: 1; grid-row: 1; }
         .spot-1 { grid-column: 1; grid-row: 2; }
         .spot-3 { grid-column: 3; grid-row: 1; }
@@ -80,6 +90,8 @@
         .counter p:last-child { margin: 10px 0 0; color: #f9e8c9; font-size: .78rem; line-height: 1.5; }
         .message { margin: 0 0 18px; padding: 14px 18px; border-radius: 14px; color: var(--free); background: var(--free-soft); font-weight: 700; }
         .message.error { color: var(--occupied); background: var(--occupied-soft); }
+        .route-message { display: none; margin: 0 0 18px; padding: 15px 18px; border-left: 5px solid var(--road-line); border-radius: 14px; color: var(--ink); background: #fff; box-shadow: 0 10px 25px rgba(18,42,48,.08); font-weight: 800; line-height: 1.5; overflow-wrap: anywhere; }
+        .route-message.visible { display: block; }
 
         @media (max-width: 720px) {
             .shell { width: min(100% - 24px, 560px); padding-top: 28px; }
@@ -97,8 +109,18 @@
             .spot-4 { grid-area: spot-4; }
             .counter { grid-area: counter; }
             .spot-5 { grid-area: spot-5; }
+            .spot { padding: 14px 8px; border-radius: 14px; }
+            .spot-head { flex-direction: column; align-items: flex-start; gap: 4px; }
+            .spot-bay { font-size: .6rem; }
+            .spot-note { overflow-wrap: anywhere; }
+            .counter { padding: 14px 8px; border-radius: 14px; }
+            .counter h2 { font-size: 1rem; overflow-wrap: anywhere; }
             .spot form { display: block; }
             .spot form button { width: 100%; margin-top: 8px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .route-path { animation: none; }
+            .spot { transition: none; }
         }
     </style>
 </head>
@@ -115,6 +137,7 @@
 
     <div th:if="${successMessage}" class="message" th:text="${successMessage}"></div>
     <div th:if="${errorMessage}" class="message error" th:text="${errorMessage}"></div>
+    <div id="route-message" class="route-message" role="status"></div>
 
     <div class="legend" aria-label="Parking status legend">
         <span><i class="free-dot"></i>Free</span>
@@ -125,6 +148,7 @@
     <section class="site-plan" aria-label="Parking area layout">
         <article th:each="spot : ${spots}"
                  th:id="'spot-' + ${spot.spotNumber}"
+                 th:data-status="${spot.status}"
                  th:class="'spot spot-' + ${spot.spotNumber.replace('SPOT-', '')} + ' ' + ${spot.status}">
             <div class="spot-head">
                 <h2 class="spot-number" th:text="'Spot ' + ${spot.spotNumber.replace('SPOT-', '')}"></h2>
@@ -135,7 +159,8 @@
             </div>
             <form th:if="${spot.status == 'free'}" th:action="@{/register}" method="post">
                 <input type="hidden" name="spotNumber" th:value="${spot.spotNumber}"/>
-                <input type="text" name="plateNumber" placeholder="Vehicle number" required/>
+                <input type="text" name="plateNumber" placeholder="Vehicle number"
+                       th:aria-label="'Vehicle number for Spot ' + ${spot.spotNumber.replace('SPOT-', '')}" required/>
                 <button type="submit">Book bay</button>
             </form>
             <p th:if="${spot.status == 'reserved'}" class="spot-note">Reserved for <strong th:text="${spot.reservedPlate}"></strong></p>
@@ -145,6 +170,17 @@
         <div class="road" aria-label="Road and driveway">
             <span class="road-label">Driveway</span>
         </div>
+
+        <svg id="route-overlay" class="route-overlay" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" hidden>
+            <defs>
+                <marker id="route-head" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="5" markerHeight="5" orient="auto">
+                    <path class="route-head" d="M 0 0 L 10 6 L 0 12 Z"/>
+                </marker>
+            </defs>
+            <path id="route-path" class="route-path" marker-end="url(#route-head)"/>
+            <g id="route-chevrons" class="route-chevrons"></g>
+            <circle id="route-origin" class="route-origin" r="5"/>
+        </svg>
 
         <aside class="counter">
             <p class="counter-kicker">Entry point</p>
@@ -157,44 +193,156 @@
 <script>
     const connectionStatus = document.getElementById('connection-status');
     const eventSource = new EventSource('/api/spots/events');
+    const routeMessage = document.getElementById('route-message');
+    const sitePlan = document.querySelector('.site-plan');
+    const road = document.querySelector('.road');
+    const routeOverlay = document.getElementById('route-overlay');
+    const routePath = document.getElementById('route-path');
+    const routeChevrons = document.getElementById('route-chevrons');
+    const routeOrigin = document.getElementById('route-origin');
+    let activeArrival = null;
+
+    function drawRoute() {
+        if (!activeArrival) return;
+        const target = document.getElementById(`spot-${activeArrival.spotNumber}`);
+        if (!target) return;
+
+        // Measure the actual grid so arrows still align when phone bay heights change.
+        const planRect = sitePlan.getBoundingClientRect();
+        const roadRect = road.getBoundingClientRect();
+        const targetRect = target.getBoundingClientRect();
+        const originX = planRect.left + sitePlan.clientLeft;
+        const originY = planRect.top + sitePlan.clientTop;
+        const centerX = roadRect.left + roadRect.width / 2 - originX;
+        const entryY = roadRect.bottom - 16 - originY;
+        const turnY = targetRect.top + targetRect.height / 2 - originY;
+        const leftSide = Number(activeArrival.spotNumber.slice(5)) <= 2;
+        const endX = (leftSide ? targetRect.right - 6 : targetRect.left + 6) - originX;
+
+        routeOverlay.setAttribute('viewBox', `0 0 ${sitePlan.clientWidth} ${sitePlan.clientHeight}`);
+        routePath.setAttribute('d', `M ${centerX} ${entryY} V ${turnY} H ${endX}`);
+        routeOrigin.setAttribute('cx', centerX);
+        routeOrigin.setAttribute('cy', entryY);
+        routeChevrons.replaceChildren();
+        for (let y = entryY - 40; y > turnY + 20; y -= 64) {
+            const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            arrow.setAttribute('d', `M ${centerX - 6} ${y + 5} L ${centerX} ${y - 2} L ${centerX + 6} ${y + 5}`);
+            routeChevrons.appendChild(arrow);
+        }
+    }
+
+    function showArrival(arrival) {
+        document.querySelectorAll('.route-target').forEach(spot => {
+            spot.classList.remove('route-target');
+            spot.removeAttribute('aria-current');
+            spot.querySelector('.spot-bay').textContent = 'Parking bay';
+        });
+        const valid = arrival && /^SPOT-[1-5]$/.test(arrival.spotNumber)
+            && typeof arrival.plateNumber === 'string';
+        const target = valid ? document.getElementById(`spot-${arrival.spotNumber}`) : null;
+        activeArrival = target && target.dataset.status === 'reserved' ? arrival : null;
+        sitePlan.classList.toggle('route-active', Boolean(activeArrival));
+        routeOverlay.toggleAttribute('hidden', !activeArrival);
+        routeMessage.classList.toggle('visible', Boolean(activeArrival));
+        if (!activeArrival) {
+            routeMessage.textContent = '';
+            return;
+        }
+
+        target.classList.add('route-target');
+        target.setAttribute('aria-current', 'location');
+        target.querySelector('.spot-bay').textContent = 'Destination';
+        const number = Number(arrival.spotNumber.slice(5));
+        const direction = number <= 2 ? 'left' : 'right';
+        routeMessage.textContent = `Vehicle ${arrival.plateNumber}: follow the arrows up the driveway, then turn ${direction} into Spot ${number}.`;
+        requestAnimationFrame(drawRoute);
+    }
 
     function renderSpot(update) {
+        if (!update || !/^SPOT-[1-5]$/.test(update.spotNumber)
+            || !['free', 'reserved', 'occupied'].includes(update.status)) return;
         const spot = document.getElementById(`spot-${update.spotNumber}`);
         if (!spot) return;
+        // An unchanged sensor update must not erase a vehicle number being typed.
+        if (spot.dataset.status === 'free' && update.status === 'free' && spot.querySelector('form')) return;
 
         const number = update.spotNumber.replace('SPOT-', '');
         spot.className = `spot spot-${number} ${update.status}`;
+        spot.dataset.status = update.status;
         spot.replaceChildren();
 
         const head = document.createElement('div');
         head.className = 'spot-head';
-        head.innerHTML = `<h2 class="spot-number">Spot ${number}</h2><span class="spot-bay">Parking bay</span>`;
+        const heading = document.createElement('h2');
+        heading.className = 'spot-number';
+        heading.textContent = `Spot ${number}`;
+        const bay = document.createElement('span');
+        bay.className = 'spot-bay';
+        bay.textContent = 'Parking bay';
+        head.append(heading, bay);
         const status = document.createElement('div');
         status.className = 'status-row';
-        status.innerHTML = `<span class="badge">${update.status}</span>`;
+        const badge = document.createElement('span');
+        badge.className = 'badge';
+        badge.textContent = update.status;
+        status.appendChild(badge);
         spot.append(head, status);
 
         if (update.status === 'free') {
-            spot.insertAdjacentHTML('beforeend', `<form action="/register" method="post"><input type="hidden" name="spotNumber" value="${update.spotNumber}"><input type="text" name="plateNumber" placeholder="Vehicle number" required><button type="submit">Book bay</button></form>`);
+            const form = document.createElement('form');
+            form.action = '/register';
+            form.method = 'post';
+            const spotInput = document.createElement('input');
+            spotInput.type = 'hidden';
+            spotInput.name = 'spotNumber';
+            spotInput.value = update.spotNumber;
+            const plateInput = document.createElement('input');
+            plateInput.name = 'plateNumber';
+            plateInput.placeholder = 'Vehicle number';
+            plateInput.setAttribute('aria-label', `Vehicle number for Spot ${number}`);
+            plateInput.required = true;
+            const button = document.createElement('button');
+            button.type = 'submit';
+            button.textContent = 'Book bay';
+            form.append(spotInput, plateInput, button);
+            spot.appendChild(form);
         } else {
             const note = document.createElement('p');
             note.className = 'spot-note';
-            note.innerHTML = update.status === 'reserved' && update.reservedPlate
-                ? `Reserved for <strong></strong>` : 'Vehicle detected';
-            if (update.status === 'reserved' && update.reservedPlate) note.querySelector('strong').textContent = update.reservedPlate;
+            note.textContent = update.status === 'reserved' ? 'Reserved' : 'Vehicle detected';
+            if (update.status === 'reserved' && update.reservedPlate) {
+                note.textContent = 'Reserved for ';
+                const plate = document.createElement('strong');
+                plate.textContent = update.reservedPlate;
+                note.appendChild(plate);
+            }
             spot.appendChild(note);
         }
     }
 
     eventSource.addEventListener('snapshot', event => {
         JSON.parse(event.data).forEach(renderSpot);
+        showArrival(activeArrival);
         connectionStatus.textContent = 'Live updates connected';
     });
     eventSource.addEventListener('spot-update', event => {
-        renderSpot(JSON.parse(event.data));
+        const update = JSON.parse(event.data);
+        renderSpot(update);
+        showArrival(activeArrival);
         connectionStatus.textContent = 'Live updates connected';
     });
-    eventSource.onerror = () => connectionStatus.textContent = 'Live connection lost. Reconnecting...';
+    eventSource.addEventListener('arrival-match', event => {
+        showArrival(JSON.parse(event.data));
+    });
+    eventSource.addEventListener('arrival-snapshot', event => {
+        const arrivals = JSON.parse(event.data);
+        showArrival(arrivals[0] || null);
+    });
+    new ResizeObserver(() => requestAnimationFrame(drawRoute)).observe(sitePlan);
+    eventSource.onerror = () => {
+        showArrival(null);
+        connectionStatus.textContent = 'Live connection lost. Reconnecting...';
+    };
 </script>
 </body>
 </html>
