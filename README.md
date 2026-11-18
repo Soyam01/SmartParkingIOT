@@ -98,4 +98,3 @@ Developed by Soyam Shrestha
 3. Paste the content and save.
 4. Push to GitHub.
 
-Would you like me to also create a `requirements.txt` for the Python part and a simple `database.sql` file?
